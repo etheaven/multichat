@@ -1,4 +1,5 @@
 import requests
+import requests
 from flask import Flask, request, Response
 from flask_cors import CORS
 import logging
@@ -54,8 +55,6 @@ def kick_proxy():
         # Rewrite URLs in the content
         content = rewrite_urls(response.text, request.url_root + 'kick_proxy')
         
-        # Remove the check for 'chatroom' in content
-        
     except requests.exceptions.RequestException as e:
         logging.error(f"Request error: {str(e)}")
         return f"Error fetching content: {str(e)}", 500
@@ -77,6 +76,7 @@ def kick_proxy():
         ('Access-Control-Allow-Origin', '*'),
         ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
         ('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept'),
+        ('Access-Control-Allow-Credentials', 'true'),
     ])
 
     return Response(content, response.status_code, headers)
@@ -90,6 +90,10 @@ def not_found(error):
 
 @app.route('/en.75a71d0c.js')
 def serve_en_js():
+    return Response("", mimetype="application/javascript")
+
+@app.route('/<path:filename>')
+def serve_static(filename):
     return Response("", mimetype="application/javascript")
 
 if __name__ == '__main__':
