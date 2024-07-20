@@ -84,8 +84,16 @@ def kick_proxy():
         logging.debug(f"Response headers: {response.headers}")
         logging.debug(f"Response content (first 500 chars): {response.text[:500]}")
         
+        # Modify the content to handle relative URLs
+        content = response.text
+        content = content.replace('src="/', 'src="https://kick.com/')
+        content = content.replace('href="/', 'href="https://kick.com/')
+        
+        # Remove Cloudflare-related scripts
+        content = re.sub(r'<script[^>]*cloudflare[^>]*>.*?</script>', '', content, flags=re.DOTALL)
+        
         # Check if the response contains the expected chat content
-        if 'chatroom' not in response.text.lower():
+        if 'chatroom' not in content.lower():
             logging.error("Response does not contain expected chat content")
             return "Failed to load chat content", 500
         
@@ -100,7 +108,7 @@ def kick_proxy():
     headers = [(name, value) for (name, value) in response.headers.items()
                if name.lower() not in excluded_headers]
 
-    return Response(response.content, response.status_code, headers)
+    return Response(content, response.status_code, headers)
 
 if __name__ == '__main__':
     app.run(debug=True)
