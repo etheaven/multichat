@@ -86,6 +86,15 @@ def kick_proxy():
         ('Access-Control-Allow-Credentials', 'true'),
     ])
 
+    # Modify Content-Security-Policy header
+    csp_header = next((header for header in headers if header[0].lower() == 'content-security-policy'), None)
+    if csp_header:
+        csp_value = csp_header[1]
+        csp_value = csp_value.replace("https://kick.com", f"{request.url_root.rstrip('/')}")
+        csp_value = csp_value.replace("https:", "https: http:")
+        headers = [header for header in headers if header[0].lower() != 'content-security-policy']
+        headers.append(('Content-Security-Policy', csp_value))
+
     return Response(content, response.status_code, headers)
 
 def handle_preflight():
