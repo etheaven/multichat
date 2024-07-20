@@ -96,7 +96,7 @@ def kick_proxy():
 
     # Add CORS headers
     headers.extend([
-        ('Access-Control-Allow-Origin', 'http://localhost:5000'),
+        ('Access-Control-Allow-Origin', request.headers.get('Origin', '*')),
         ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
         ('Access-Control-Allow-Headers', '*'),
         ('Access-Control-Allow-Credentials', 'true'),
