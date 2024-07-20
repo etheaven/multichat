@@ -6,14 +6,25 @@ import re
 import json
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, allow_headers="*")
 logging.basicConfig(level=logging.DEBUG)
 
 def rewrite_urls(content, proxy_url):
     # Rewrite URLs to go through our proxy
     content = re.sub(r'(src|href)="(https?://[^"]+)"', lambda m: f'{m.group(1)}="{proxy_url}?url={m.group(2)}"', content)
     content = re.sub(r'(src|href)="(/[^"]+)"', lambda m: f'{m.group(1)}="{proxy_url}?url=https://kick.com{m.group(2)}"', content)
+    content = re.sub(r"(src|href)='(https?://[^']+)'", lambda m: f"{m.group(1)}='{proxy_url}?url={m.group(2)}'", content)
+    content = re.sub(r"(src|href)='(/[^']+)'", lambda m: f"{m.group(1)}='{proxy_url}?url=https://kick.com{m.group(2)}'", content)
     return content
+
+def modify_csp_header(csp_value, request_url_root):
+    csp_parts = csp_value.split(';')
+    modified_parts = []
+    for part in csp_parts:
+        if 'script-src' in part or 'style-src' in part or 'img-src' in part or 'connect-src' in part:
+            part = part.strip() + f" {request_url_root.rstrip('/')} http: https:"
+        modified_parts.append(part)
+    return '; '.join(modified_parts)
 
 @app.route('/kick_proxy', methods=['GET', 'POST', 'OPTIONS'])
 def kick_proxy():
@@ -82,7 +93,7 @@ def kick_proxy():
     headers.extend([
         ('Access-Control-Allow-Origin', request.headers.get('Origin', '*')),
         ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
-        ('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept'),
+        ('Access-Control-Allow-Headers', '*'),
         ('Access-Control-Allow-Credentials', 'true'),
     ])
 
@@ -90,8 +101,7 @@ def kick_proxy():
     csp_header = next((header for header in headers if header[0].lower() == 'content-security-policy'), None)
     if csp_header:
         csp_value = csp_header[1]
-        csp_value = csp_value.replace("https://kick.com", f"{request.url_root.rstrip('/')}")
-        csp_value = csp_value.replace("https:", "https: http:")
+        csp_value = modify_csp_header(csp_value, request.url_root)
         headers = [header for header in headers if header[0].lower() != 'content-security-policy']
         headers.append(('Content-Security-Policy', csp_value))
 
