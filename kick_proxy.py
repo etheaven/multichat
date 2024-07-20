@@ -8,13 +8,20 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 logging.basicConfig(level=logging.DEBUG)
 
+def rewrite_urls(content, proxy_url):
+    # Rewrite URLs to go through our proxy
+    content = re.sub(r'(src|href)="(https?://[^"]+)"', lambda m: f'{m.group(1)}="{proxy_url}?url={m.group(2)}"', content)
+    content = re.sub(r'(src|href)="(/[^"]+)"', lambda m: f'{m.group(1)}="{proxy_url}?url=https://kick.com{m.group(2)}"', content)
+    return content
+
 @app.route('/kick_proxy')
 def kick_proxy():
-    username = request.args.get('username')
-    if not username:
-        return "Username is required", 400
-
-    url = f"https://kick.com/{username}/chatroom"
+    url = request.args.get('url')
+    if not url:
+        username = request.args.get('username')
+        if not username:
+            return "Username or URL is required", 400
+        url = f"https://kick.com/{username}/chatroom"
     
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -42,11 +49,8 @@ def kick_proxy():
         logging.debug(f"Response headers: {response.headers}")
         logging.debug(f"Response content (first 500 chars): {response.text[:500]}")
         
-        # Modify the content to handle relative URLs
-        content = response.text
-        content = content.replace('src="/', 'src="https://kick.com/')
-        content = content.replace('href="/', 'href="https://kick.com/')
-        content = re.sub(r'(src|href)="(?!http)', r'\1="https://kick.com/', content)
+        # Rewrite URLs in the content
+        content = rewrite_urls(response.text, request.url_root + 'kick_proxy')
         
         # Check if the response contains the expected chat content
         if 'chatroom' not in content.lower():
@@ -69,15 +73,20 @@ def kick_proxy():
     for cookie in response.cookies:
         headers.append(('Set-Cookie', f"{cookie.name}={cookie.value}; Path={cookie.path}; Domain={request.host}"))
 
-    # Add Access-Control-Allow-Origin header
-    headers.append(('Access-Control-Allow-Origin', '*'))
+    # Add CORS headers
+    headers.extend([
+        ('Access-Control-Allow-Origin', '*'),
+        ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
+        ('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept'),
+    ])
 
     return Response(content, response.status_code, headers)
 
 @app.errorhandler(404)
 def not_found(error):
     if 'cdn-cgi/challenge-platform/scripts/jsd/main.js' in request.path:
-        return "Cloudflare challenge script not available", 404
+        # Return an empty JavaScript file instead of 404
+        return Response("", mimetype="application/javascript")
     return "Not Found", 404
 
 if __name__ == '__main__':
