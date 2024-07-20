@@ -22,11 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch(chatUrl, {
             mode: 'cors',
             credentials: 'include'
-        }).then(response => response.text()).then(data => {
+        }).then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
+            }
+            return response.text();
+        }).then(data => {
             const chatDiv = document.createElement('div');
             chatDiv.innerHTML = `<iframe src="${chatUrl}" height="500" width="100%" frameborder="0"></iframe>`;
             chatContainer.innerHTML = ''; // Clear previous chat
             chatContainer.appendChild(chatDiv);
-        }).catch(error => console.error('Error:', error));
+        }).catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
     }
 });
