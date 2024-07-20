@@ -1,4 +1,7 @@
 <?php
+require 'vendor/autoload.php';
+use KyranRana\CloudflareBypass\CFBypass;
+
 header('Access-Control-Allow-Origin: *');
 header('Content-Type: text/html; charset=utf-8');
 
@@ -8,19 +11,16 @@ if (empty($username)) {
 }
 
 $url = "https://kick.com/{$username}/chatroom";
-$ch = curl_init();
-curl_setopt($ch, CURLOPT_URL, $url);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-curl_setopt($ch, CURLOPT_COOKIEJAR, 'cookies.txt');
-curl_setopt($ch, CURLOPT_COOKIEFILE, 'cookies.txt');
 
-$response = curl_exec($ch);
+$cfBypass = new CFBypass();
+try {
+    $response = $cfBypass->request($url, [
+        'headers' => [
+            'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        ]
+    ]);
 
-if (curl_errno($ch)) {
-    die('Curl error: ' . curl_error($ch));
+    echo $response;
+} catch (Exception $e) {
+    die('Error: ' . $e->getMessage());
 }
-
-curl_close($ch);
-
-echo $response;
