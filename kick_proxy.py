@@ -22,7 +22,7 @@ def modify_csp_header(csp_value, request_url_root):
     modified_parts = []
     for part in csp_parts:
         if 'script-src' in part or 'style-src' in part or 'img-src' in part or 'connect-src' in part:
-            part = part.strip() + f" {request_url_root.rstrip('/')} http: https: 'unsafe-inline' 'unsafe-eval'"
+            part = part.strip() + f" {request_url_root.rstrip('/')} http: https: 'unsafe-inline' 'unsafe-eval' http://localhost:5000"
         modified_parts.append(part)
     return '; '.join(modified_parts)
 
@@ -96,7 +96,7 @@ def kick_proxy():
 
     # Add CORS headers
     headers.extend([
-        ('Access-Control-Allow-Origin', '*'),
+        ('Access-Control-Allow-Origin', 'http://localhost:5000'),
         ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
         ('Access-Control-Allow-Headers', '*'),
         ('Access-Control-Allow-Credentials', 'true'),
