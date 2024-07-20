@@ -2,9 +2,46 @@ import requests
 from flask import Flask, request, Response
 import urllib.parse
 import logging
+import time
+import re
+import js2py
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
+
+def solve_cf_challenge(session, response):
+    # Extract the challenge
+    challenge_form = re.search(r'<form.*?id="challenge-form".*?>(.*?)</form>', response.text, re.DOTALL)
+    if not challenge_form:
+        logging.error("Cloudflare challenge form not found")
+        return None
+
+    # Extract necessary parameters
+    params = {}
+    for input_tag in re.finditer(r'<input.*?name="(.*?)".*?value="(.*?)"', challenge_form.group(1)):
+        params[input_tag.group(1)] = input_tag.group(2)
+
+    # Solve the JavaScript challenge
+    js_challenge = re.search(r'setTimeout\(function\(\){\s*(var s,t,o,p,b,r,e,a,k,i,n,g,f.+?\r?\n[\s\S]+?a\.value =.+?)\r?\n', response.text)
+    if js_challenge:
+        js_code = js_challenge.group(1)
+        js_code = js_code.replace('t.length)', 'Object.keys(t).length)')
+        context = js2py.EvalJs()
+        context.execute(js_code)
+        result = context.eval('a.value')
+        params['jschl_answer'] = result
+
+    # Wait for the specified time
+    time.sleep(5)
+
+    # Make the challenge response request
+    challenge_url = f"{response.url.scheme}://{response.url.netloc}/cdn-cgi/l/chk_jschl"
+    headers = {
+        'User-Agent': session.headers['User-Agent'],
+        'Referer': response.url
+    }
+    r = session.get(challenge_url, params=params, headers=headers)
+    return r
 
 @app.route('/kick_proxy')
 def kick_proxy():
@@ -31,7 +68,16 @@ def kick_proxy():
     
     try:
         session = requests.Session()
-        response = session.get(url, headers=headers)
+        session.headers.update(headers)
+        
+        response = session.get(url)
+        
+        if response.status_code == 403 and 'cf-browser-verification' in response.text:
+            logging.info("Detected Cloudflare challenge, attempting to solve...")
+            response = solve_cf_challenge(session, response)
+            if response is None:
+                return "Failed to solve Cloudflare challenge", 500
+        
         response.raise_for_status()
         
         logging.debug(f"Response status: {response.status_code}")
