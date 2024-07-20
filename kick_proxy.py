@@ -1,12 +1,12 @@
 import requests
-import requests
 from flask import Flask, request, Response
 from flask_cors import CORS
 import logging
 import re
+import json
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 logging.basicConfig(level=logging.DEBUG)
 
 def rewrite_urls(content, proxy_url):
@@ -15,8 +15,11 @@ def rewrite_urls(content, proxy_url):
     content = re.sub(r'(src|href)="(/[^"]+)"', lambda m: f'{m.group(1)}="{proxy_url}?url=https://kick.com{m.group(2)}"', content)
     return content
 
-@app.route('/kick_proxy')
+@app.route('/kick_proxy', methods=['GET', 'POST', 'OPTIONS'])
 def kick_proxy():
+    if request.method == 'OPTIONS':
+        return handle_preflight()
+
     url = request.args.get('url')
     if not url:
         username = request.args.get('username')
@@ -45,7 +48,11 @@ def kick_proxy():
         session = requests.Session()
         session.headers.update(headers)
         
-        response = session.get(url, allow_redirects=True)
+        if request.method == 'POST':
+            response = session.post(url, data=request.form, allow_redirects=True)
+        else:
+            response = session.get(url, allow_redirects=True)
+        
         response.raise_for_status()
         
         logging.debug(f"Response status: {response.status_code}")
@@ -69,17 +76,25 @@ def kick_proxy():
 
     # Forward cookies
     for cookie in response.cookies:
-        headers.append(('Set-Cookie', f"{cookie.name}={cookie.value}; Path={cookie.path}; Domain={request.host}"))
+        headers.append(('Set-Cookie', f"{cookie.name}={cookie.value}; Path={cookie.path}; Domain={request.host}; SameSite=None; Secure"))
 
     # Add CORS headers
     headers.extend([
-        ('Access-Control-Allow-Origin', '*'),
+        ('Access-Control-Allow-Origin', request.headers.get('Origin', '*')),
         ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
         ('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept'),
         ('Access-Control-Allow-Credentials', 'true'),
     ])
 
     return Response(content, response.status_code, headers)
+
+def handle_preflight():
+    response = Response()
+    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 @app.errorhandler(404)
 def not_found(error):
