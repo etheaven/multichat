@@ -12,10 +12,28 @@ def kick_proxy():
 
     url = f"https://kick.com/{username}/chatroom"
     
-    scraper = cloudscraper.create_scraper()
-    response = scraper.get(url)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'DNT': '1',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+    }
     
-    return Response(response.content, content_type=response.headers['Content-Type'])
+    scraper = cloudscraper.create_scraper()
+    try:
+        response = scraper.get(url, headers=headers)
+        response.raise_for_status()
+    except Exception as e:
+        return f"Error fetching content: {str(e)}", 500
+
+    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+    headers = [(name, value) for (name, value) in response.headers.items()
+               if name.lower() not in excluded_headers]
+
+    return Response(response.content, response.status_code, headers)
 
 if __name__ == '__main__':
     app.run(debug=True)
