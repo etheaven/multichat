@@ -1,5 +1,5 @@
 import requests
-from flask import Flask, request, Response
+from flask import Flask, request, Response, jsonify
 from flask_cors import CORS
 import logging
 import re
@@ -29,12 +29,7 @@ def modify_csp_header(csp_value, request_url_root):
 @app.route('/kick_proxy', methods=['GET', 'POST', 'OPTIONS'])
 def kick_proxy():
     if request.method == 'OPTIONS':
-        response = handle_preflight()
-        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', '*')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        return response
+        return handle_preflight()
 
     url = request.args.get('url')
     if not url:
@@ -80,10 +75,10 @@ def kick_proxy():
         
     except requests.exceptions.RequestException as e:
         logging.error(f"Request error: {str(e)}")
-        return f"Error fetching content: {str(e)}", 500
+        return jsonify({"error": str(e)}), 500
     except Exception as e:
         logging.error(f"Unexpected error: {str(e)}")
-        return f"Unexpected error occurred: {str(e)}", 500
+        return jsonify({"error": str(e)}), 500
 
     # Forward all headers except those that might cause issues
     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
@@ -125,7 +120,7 @@ def not_found(error):
     if 'cdn-cgi/challenge-platform/scripts/jsd/main.js' in request.path:
         # Return an empty JavaScript file instead of 404
         return Response("", mimetype="application/javascript")
-    return "Not Found", 404
+    return jsonify({"error": "Not Found"}), 404
 
 @app.route('/en.75a71d0c.js')
 def serve_en_js():
@@ -140,7 +135,7 @@ def handle_csrf_cookie():
     if request.method == 'OPTIONS':
         return handle_preflight()
     
-    response = Response()
+    response = Response(json.dumps({"csrf_token": "dummy-token"}), mimetype='application/json')
     response.set_cookie('XSRF-TOKEN', 'dummy-token', secure=True, httponly=True, samesite='None')
     response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
     response.headers.add('Access-Control-Allow-Credentials', 'true')
