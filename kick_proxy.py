@@ -84,9 +84,17 @@ def kick_proxy():
         logging.debug(f"Response headers: {response.headers}")
         logging.debug(f"Response content (first 500 chars): {response.text[:500]}")
         
-    except Exception as e:
-        logging.error(f"Error fetching content: {str(e)}")
+        # Check if the response contains the expected chat content
+        if 'chatroom' not in response.text.lower():
+            logging.error("Response does not contain expected chat content")
+            return "Failed to load chat content", 500
+        
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Request error: {str(e)}")
         return f"Error fetching content: {str(e)}", 500
+    except Exception as e:
+        logging.error(f"Unexpected error: {str(e)}")
+        return f"Unexpected error occurred: {str(e)}", 500
 
     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
     headers = [(name, value) for (name, value) in response.headers.items()
