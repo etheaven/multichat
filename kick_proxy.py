@@ -22,7 +22,7 @@ def modify_csp_header(csp_value, request_url_root):
     modified_parts = []
     for part in csp_parts:
         if 'script-src' in part or 'style-src' in part or 'img-src' in part or 'connect-src' in part:
-            part = part.strip() + f" {request_url_root.rstrip('/')} http: https:"
+            part = part.strip() + f" {request_url_root.rstrip('/')} http: https: 'unsafe-inline' 'unsafe-eval'"
         modified_parts.append(part)
     return '; '.join(modified_parts)
 
@@ -130,13 +130,15 @@ def serve_en_js():
 def serve_static(filename):
     return Response("", mimetype="application/javascript")
 
-@app.route('/sanctum/csrf-cookie', methods=['GET', 'OPTIONS'])
+@app.route('/sanctum/csrf-cookie', methods=['GET', 'POST', 'OPTIONS'])
 def handle_csrf_cookie():
     if request.method == 'OPTIONS':
         return handle_preflight()
     
     response = Response()
     response.set_cookie('XSRF-TOKEN', 'dummy-token', secure=True, httponly=True, samesite='None')
+    response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
     return response
 
 if __name__ == '__main__':
