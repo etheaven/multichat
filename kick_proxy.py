@@ -5,7 +5,7 @@ import logging
 import re
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/kick_proxy')
@@ -69,7 +69,16 @@ def kick_proxy():
     for cookie in response.cookies:
         headers.append(('Set-Cookie', f"{cookie.name}={cookie.value}; Path={cookie.path}; Domain={request.host}"))
 
+    # Add Access-Control-Allow-Origin header
+    headers.append(('Access-Control-Allow-Origin', '*'))
+
     return Response(content, response.status_code, headers)
+
+@app.errorhandler(404)
+def not_found(error):
+    if 'cdn-cgi/challenge-platform/scripts/jsd/main.js' in request.path:
+        return "Cloudflare challenge script not available", 404
+    return "Not Found", 404
 
 if __name__ == '__main__':
     app.run(debug=True)
