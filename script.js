@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (platform === 'twitch') {
             chatUrl = `https://www.twitch.tv/embed/${username}/chat?parent=${window.location.hostname}`;
         } else if (platform === 'kick') {
-            chatUrl = `kick-proxy.php?username=${encodeURIComponent(username)}`;
+            chatUrl = `/kick_proxy?username=${encodeURIComponent(username)}`;
         }
 
         console.log(chatUrl);
