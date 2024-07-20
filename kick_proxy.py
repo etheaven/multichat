@@ -130,5 +130,14 @@ def serve_en_js():
 def serve_static(filename):
     return Response("", mimetype="application/javascript")
 
+@app.route('/sanctum/csrf-cookie', methods=['GET', 'OPTIONS'])
+def handle_csrf_cookie():
+    if request.method == 'OPTIONS':
+        return handle_preflight()
+    
+    response = Response()
+    response.set_cookie('XSRF-TOKEN', 'dummy-token', secure=True, httponly=True, samesite='None')
+    return response
+
 if __name__ == '__main__':
     app.run(debug=True)
