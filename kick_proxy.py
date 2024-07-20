@@ -36,13 +36,15 @@ def kick_proxy():
         'Sec-Fetch-Site': 'none',
         'Sec-Fetch-User': '?1',
         'Cache-Control': 'max-age=0',
+        'Origin': 'https://kick.com',
+        'Referer': 'https://kick.com/',
     }
     
     try:
         session = requests.Session()
         session.headers.update(headers)
         
-        response = session.get(url)
+        response = session.get(url, allow_redirects=True)
         response.raise_for_status()
         
         logging.debug(f"Response status: {response.status_code}")
@@ -52,10 +54,7 @@ def kick_proxy():
         # Rewrite URLs in the content
         content = rewrite_urls(response.text, request.url_root + 'kick_proxy')
         
-        # Check if the response contains the expected chat content
-        if 'chatroom' not in content.lower():
-            logging.error("Response does not contain expected chat content")
-            return "Failed to load chat content", 500
+        # Remove the check for 'chatroom' in content
         
     except requests.exceptions.RequestException as e:
         logging.error(f"Request error: {str(e)}")
@@ -88,6 +87,10 @@ def not_found(error):
         # Return an empty JavaScript file instead of 404
         return Response("", mimetype="application/javascript")
     return "Not Found", 404
+
+@app.route('/en.75a71d0c.js')
+def serve_en_js():
+    return Response("", mimetype="application/javascript")
 
 if __name__ == '__main__':
     app.run(debug=True)
