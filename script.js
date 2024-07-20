@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (platform === 'twitch') {
             chatUrl = `https://www.twitch.tv/embed/${username}/chat?parent=${window.location.hostname}`;
         } else if (platform === 'kick') {
-            chatUrl = `kick-proxy.html?username=${encodeURIComponent(username)}`;
+            chatUrl = `kick-proxy.php?username=${encodeURIComponent(username)}`;
         }
 
         console.log(chatUrl);
@@ -23,7 +23,5 @@ document.addEventListener('DOMContentLoaded', () => {
         chatDiv.innerHTML = `<iframe src="${chatUrl}" height="500" width="100%" frameborder="0"></iframe>`;
         chatContainer.innerHTML = ''; // Clear previous chat
         chatContainer.appendChild(chatDiv);
-
-        // Remove the interval as it's not necessary anymore
     }
 });
