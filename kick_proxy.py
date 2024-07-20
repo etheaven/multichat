@@ -29,7 +29,12 @@ def modify_csp_header(csp_value, request_url_root):
 @app.route('/kick_proxy', methods=['GET', 'POST', 'OPTIONS'])
 def kick_proxy():
     if request.method == 'OPTIONS':
-        return handle_preflight()
+        response = handle_preflight()
+        response.headers.add('Access-Control-Allow-Origin', request.headers.get('Origin', '*'))
+        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', '*')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
 
     url = request.args.get('url')
     if not url:
@@ -91,7 +96,7 @@ def kick_proxy():
 
     # Add CORS headers
     headers.extend([
-        ('Access-Control-Allow-Origin', request.headers.get('Origin', '*')),
+        ('Access-Control-Allow-Origin', '*'),
         ('Access-Control-Allow-Methods', 'GET, POST, OPTIONS'),
         ('Access-Control-Allow-Headers', '*'),
         ('Access-Control-Allow-Credentials', 'true'),
