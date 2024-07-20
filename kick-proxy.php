@@ -23,6 +23,7 @@ curl_setopt($ch, CURLOPT_HTTPHEADER, [
     'Connection: keep-alive',
     'Upgrade-Insecure-Requests: 1'
 ]);
+curl_setopt($ch, CURLOPT_ENCODING, ''); // Handle gzip/deflate content encoding
 
 $response = curl_exec($ch);
 
@@ -30,6 +31,17 @@ if (curl_errno($ch)) {
     die('Curl error: ' . curl_error($ch));
 }
 
+$encoding = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
 curl_close($ch);
+
+// Ensure the response is in UTF-8
+if (stripos($encoding, 'charset=') === false) {
+    $response = mb_convert_encoding($response, 'UTF-8', 'UTF-8, ISO-8859-1');
+} elseif (stripos($encoding, 'charset=utf-8') === false) {
+    $response = mb_convert_encoding($response, 'UTF-8', substr($encoding, stripos($encoding, 'charset=') + 8));
+}
+
+// Remove any BOM if present
+$response = preg_replace('/^\xEF\xBB\xBF/', '', $response);
 
 echo $response;
