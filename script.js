@@ -19,9 +19,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         console.log(chatUrl);
         
-        const chatDiv = document.createElement('div');
-        chatDiv.innerHTML = `<iframe src="${chatUrl}" height="500" width="100%" frameborder="0"></iframe>`;
-        chatContainer.innerHTML = ''; // Clear previous chat
-        chatContainer.appendChild(chatDiv);
+        fetch(chatUrl, {
+            mode: 'cors',
+            credentials: 'include'
+        }).then(response => response.text()).then(data => {
+            const chatDiv = document.createElement('div');
+            chatDiv.innerHTML = `<iframe src="${chatUrl}" height="500" width="100%" frameborder="0"></iframe>`;
+            chatContainer.innerHTML = ''; // Clear previous chat
+            chatContainer.appendChild(chatDiv);
+        }).catch(error => console.error('Error:', error));
     }
 });
